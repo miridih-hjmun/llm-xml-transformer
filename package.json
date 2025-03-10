@@ -1,0 +1,44 @@
+{
+  "name": "ailabs-llm-xml-transformer",
+  "version": "1.0.0",
+  "description": "XML 변환 및 LLM 처리를 위한 통합 도구",
+  "main": "index.js",
+  "bin": {
+    "xml-transformer": "./bin/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p node/tsconfig.json",
+    "start": "npm run build && node node/dist/app.js",
+    "postinstall": "pip install -r requirements.txt"
+  },
+  "keywords": [
+    "xml",
+    "llm",
+    "transformer",
+    "python",
+    "node"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/puppeteer": "^5.4.7",
+    "dotenv": "^16.4.7",
+    "puppeteer": "^24.3.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3",
+    "commander": "^11.0.0",
+    "chalk": "^4.1.2"
+  },
+  "devDependencies": {
+    "@types/dotenv": "^6.1.1",
+    "@types/node": "^20.10.0"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/ailabs-llm-xml-transformer.git"
+  }
+} 
