@@ -55,14 +55,26 @@ class MiricanvasPage {
             console.log(`XML 문자열 처리 중 (페이지 인덱스: ${pageIdx})...`);
             // 미리캔버스 스테이징 환경 접속
             await this.navigateToStaging();
-            // Positive XML 처리
-            console.log('Positive XML 처리 중...');
-            await this.loadXmlString(positiveXml);
-            await this.renderAndSaveImage(pageIdx, 'positive');
-            // Negative XML 처리
-            console.log('Negative XML 처리 중...');
-            await this.loadXmlString(negativeXml);
-            await this.renderAndSaveImage(pageIdx, 'negative');
+            // 중요: XML 처리는 순차적으로 진행됩니다. 동시에 처리되지 않습니다.
+            // XML 파일 저장
+            await this.saveXmlFiles(positiveXml, negativeXml, pageIdx);
+            // XML 문자열 배열과 타입 배열 생성
+            const xmlStrings = [positiveXml, negativeXml];
+            const types = ['positive', 'negative'];
+            // 각 XML 문자열을 순차적으로 처리
+            for (let i = 0; i < xmlStrings.length; i++) {
+                const xmlString = xmlStrings[i];
+                const type = types[i];
+                console.log(`${type.charAt(0).toUpperCase() + type.slice(1)} XML 처리 중...`);
+                try {
+                    await this.loadXmlString(xmlString);
+                    await this.renderAndSaveImage(pageIdx, type);
+                }
+                catch (error) {
+                    console.error(`${type} XML 처리 중 오류 발생: ${error}`);
+                    throw error;
+                }
+            }
             console.log(`페이지 인덱스 ${pageIdx}의 XML 처리 완료`);
         }
         catch (error) {
@@ -112,6 +124,31 @@ class MiricanvasPage {
         console.log('로그인 완료');
     }
     /**
+     * XML 파일을 저장합니다
+     *
+     * @param positiveXml positive XML 문자열
+     * @param negativeXml negative XML 문자열
+     * @param pageIdx 페이지 인덱스
+     */
+    async saveXmlFiles(positiveXml, negativeXml, pageIdx) {
+        try {
+            const outputDir = process.env.OUTPUT_PATH || './output';
+            // 페이지별 result 디렉토리 생성
+            const resultDir = path.join(outputDir, 'result', pageIdx);
+            fs.mkdirSync(resultDir, { recursive: true });
+            // XML 파일 저장 (파일명 앞에 페이지 인덱스 추가)
+            const positiveXmlPath = path.join(resultDir, `${pageIdx}_positive.xml`);
+            const negativeXmlPath = path.join(resultDir, `${pageIdx}_negative.xml`);
+            fs.writeFileSync(positiveXmlPath, positiveXml, 'utf-8');
+            fs.writeFileSync(negativeXmlPath, negativeXml, 'utf-8');
+            console.log(`XML 파일 저장 완료: ${resultDir}`);
+        }
+        catch (error) {
+            console.error(`XML 파일 저장 중 오류 발생: ${error}`);
+            throw error;
+        }
+    }
+    /**
      * XML 문자열을 로드합니다
      *
      * @param xmlString XML 문자열
@@ -138,11 +175,12 @@ class MiricanvasPage {
         const imageDataUrl = await this.page.evaluate(async (options) => {
             return await window.renderPage(options);
         }, renderOptions);
-        // 이미지 저장 경로
+        // 이미지 저장 경로 - XML 파일과 동일한 폴더에 저장 (파일명 앞에 페이지 인덱스 추가)
         const outputDir = process.env.OUTPUT_PATH || './output';
-        const imagePath = path.join(outputDir, `${pageIdx}_${type}.png`);
+        const resultDir = path.join(outputDir, 'result', pageIdx);
+        const imagePath = path.join(resultDir, `${pageIdx}_${type}.png`);
         // 디렉토리 생성
-        fs.mkdirSync(path.dirname(imagePath), { recursive: true });
+        fs.mkdirSync(resultDir, { recursive: true });
         // 이미지 저장
         const base64Data = imageDataUrl.replace(/^data:image\/png;base64,/, '');
         fs.writeFileSync(imagePath, Buffer.from(base64Data, 'base64'));

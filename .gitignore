@@ -13,3 +13,7 @@ data_xml_query_modified
 ## node
 node_modules/
 prompt/
+
+## python - 임시로 Python 파일 변경사항 무시
+python/process.py
+python/services/xml_processor.py

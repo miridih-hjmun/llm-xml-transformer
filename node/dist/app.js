@@ -37,10 +37,11 @@ const browser_1 = require("./puppeteer/browser");
 const page_1 = require("./puppeteer/page");
 const dotenv = __importStar(require("dotenv"));
 const fs = __importStar(require("fs"));
+const path = require('path');
 // 명령줄 인자 파싱
 const args = process.argv.slice(2);
 let dataFilePath = '';
-let outputDir = '';
+let outputPath = '';
 // 명령줄 인자 처리
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '--data' && i + 1 < args.length) {
@@ -48,20 +49,21 @@ for (let i = 0; i < args.length; i++) {
         i++;
     }
     else if (args[i] === '--output' && i + 1 < args.length) {
-        outputDir = args[i + 1];
+        outputPath = args[i + 1];
         i++;
     }
 }
 // 환경 변수 로드
-dotenv.config();
+console.log('현재 디렉토리 경로:', __dirname);
+const envPath = path.resolve(__dirname, '../.env');
+console.log('.env 파일 경로:', envPath);
+dotenv.config({ path: envPath });
 // 환경 변수 로드 상태 확인
 console.log('환경 변수 로드 상태:', {
     EMAIL: process.env.EMAIL ? '설정됨' : '설정되지 않음',
     PASSWORD: process.env.PASSWORD ? '설정됨' : '설정되지 않음',
     STAGING7_URL: process.env.STAGING7_URL ? '설정됨' : '설정되지 않음'
 });
-// 환경 변수 설정
-process.env.OUTPUT_PATH = outputDir;
 /**
  * Python에서 전달받은 XML 처리 결과 데이터 로드
  */
@@ -84,13 +86,13 @@ function loadXmlResults(filePath) {
 async function main() {
     console.log('미리캔버스 스테이징 환경 접속 및 XML 처리를 시작합니다.');
     // 명령줄 인자 확인
-    if (!dataFilePath || !outputDir) {
+    if (!dataFilePath || !outputPath) {
         console.error('오류: --data 및 --output 인자가 필요합니다.');
         console.log('사용법: node app.js --data <xml_results.json 경로> --output <출력 디렉토리>');
         process.exit(1);
     }
     console.log(`데이터 파일: ${dataFilePath}`);
-    console.log(`출력 디렉토리: ${outputDir}`);
+    console.log(`출력 디렉토리: ${outputPath}`);
     // XML 처리 결과 데이터 로드
     let xmlResults;
     try {
