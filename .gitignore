@@ -7,6 +7,7 @@ venv
 venv39
 .pytest_cache
 __pycache__
+
 data_xml_query_modified
 
 ## node
