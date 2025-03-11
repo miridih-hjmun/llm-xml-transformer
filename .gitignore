@@ -11,6 +11,5 @@ __pycache__
 data_xml_query_modified
 
 ## node
-node/
 node_modules/
 prompt/
