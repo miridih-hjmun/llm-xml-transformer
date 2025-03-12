@@ -28,9 +28,6 @@ def main():
         # 입력 및 출력 경로 설정
         input_path = os.path.abspath(args.input)
         output_path = os.path.abspath(args.output)
-        
-        # skip-node 옵션 확인
-        skip_node = getattr(args, 'skip_node', False)
     
     # 환경 변수 로드 결과 확인
     if not env_result.get("success", False):
@@ -50,50 +47,45 @@ def main():
     
     # Python 처리 단계: XML 추출 및 처리
     print("Python 처리 단계: XML 추출 및 처리 중...")
-    xml_results = process()
+    process()
     
-    # 결과를 임시 JSON 파일로 저장 (Node.js로 전달하기 위함)
-    temp_json_path = os.path.join(output_path, "xml_results.json")
-    with open(temp_json_path, 'w', encoding='utf-8') as f:
-        json.dump(xml_results, f, ensure_ascii=False, indent=2)
+    # batches_meta.json 파일 경로
+    meta_json_path = os.path.join(output_path, "batches_meta.json")
     
-    # Node.js 처리 단계 (skip-node 옵션이 설정되지 않은 경우에만)
-    skip_node = os.environ.get('SKIP_NODE', 'False').lower() == 'true' if DEBUG_MODE else getattr(args, 'skip_node', False)
+    # Node.js 처리 단계
+    print("Node.js 처리 단계: 추출된 XML 데이터 처리 중...")
     
-    if not skip_node:
-        print("Node.js 처리 단계: 추출된 XML 데이터 처리 중...")
+    # 현재 스크립트의 경로를 기준으로 Node.js 스크립트 경로 계산
+    current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    node_script_path = os.path.join(current_dir, "node", "dist", "app.js")
+    
+    # Node.js 스크립트 실행
+    try:
+        node_process = subprocess.Popen(
+            ["node", node_script_path, "--data", meta_json_path, "--output", output_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
         
-        # 현재 스크립트의 경로를 기준으로 Node.js 스크립트 경로 계산
-        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        node_script_path = os.path.join(current_dir, "node", "dist", "app.js")
+        # 실시간으로 출력 표시
+        for line in node_process.stdout:
+            print(line.strip())
         
-        # Node.js 스크립트 실행
-        try:
-            node_process = subprocess.Popen(
-                ["node", node_script_path, "--data", temp_json_path, "--output", output_path],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
-            
-            # 실시간으로 출력 표시
-            for line in node_process.stdout:
+        # 프로세스 완료 대기
+        node_process.wait()
+        
+        # 오류 확인
+        if node_process.returncode != 0:
+            print("Node.js 처리 중 오류 발생:")
+            for line in node_process.stderr:
                 print(line.strip())
-            
-            # 프로세스 완료 대기
-            node_process.wait()
-            
-            # 오류 확인
-            if node_process.returncode != 0:
-                print("Node.js 처리 중 오류 발생:")
-                for line in node_process.stderr:
-                    print(line.strip())
-                return
-            
-            print("Node.js 처리 완료")
-        except Exception as e:
-            print(f"Node.js 스크립트 실행 중 오류 발생: {e}")
             return
+        
+        print("Node.js 처리 완료")
+    except Exception as e:
+        print(f"Node.js 스크립트 실행 중 오류 발생: {e}")
+        return
     
     print(f"모든 처리가 완료되었습니다. 결과는 {output_path}에 저장되었습니다.")
 
