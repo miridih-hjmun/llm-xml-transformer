@@ -99,84 +99,50 @@ async function main() {
     let data;
     try {
         data = loadJsonFile(dataFilePath);
-        // 배치 메타데이터인지 확인
-        if (data.batches && Array.isArray(data.batches)) {
-            console.log(`배치 메타데이터 로드 완료: 총 ${data.total_batches}개 배치, ${data.total_files}개 파일`);
-            // 각 배치 처리
-            for (const batch of data.batches) {
-                console.log(`배치 ${batch.batch_idx + 1}/${data.total_batches} 처리 시작 (${batch.file_count}개 파일)`);
-                try {
-                    // 배치 데이터 로드
-                    const batchData = loadJsonFile(batch.json_path);
-                    console.log(`배치 데이터 로드 완료: ${batchData.processed_files.length}개 파일`);
-                    // 브라우저 시작 (배치당 한 번만)
-                    const browser = new browser_1.MiricanvasBrowser();
-                    try {
-                        // 브라우저 시작 및 페이지 로드
-                        const headless = process.env.HEADLESS === 'true';
-                        const page = await browser.launch(headless);
-                        // 페이지 로드 확인
-                        console.log('페이지 타이틀:', await page.title());
-                        // MiricanvasPage 인스턴스 생성
-                        const miriPage = new page_1.MiricanvasPage(page);
-                        // 배치 내 각 파일 처리
-                        for (const processedFile of batchData.processed_files) {
-                            console.log(`파일 처리 중: ${processedFile.file} (번호: ${processedFile.page_idx})`);
-                            // XML 문자열 직접 사용
-                            if (processedFile.positive_xml && processedFile.negative_xml) {
-                                await miriPage.processXmlString(processedFile.positive_xml, processedFile.negative_xml, processedFile.page_idx);
-                            }
-                            else {
-                                console.warn(`경고: ${processedFile.file}에 XML 문자열이 없습니다.`);
-                            }
-                        }
-                        console.log(`배치 ${batch.batch_idx + 1} 처리 완료`);
-                    }
-                    finally {
-                        // 브라우저 종료
-                        await browser.close();
-                        console.log('브라우저가 종료되었습니다.');
-                    }
-                }
-                catch (error) {
-                    console.error(`배치 ${batch.batch_idx + 1} 처리 중 오류 발생:`, error);
-                }
-            }
-            console.log('모든 배치 처리가 완료되었습니다.');
+        // 배치 메타데이터 확인
+        if (!data.batches || !Array.isArray(data.batches)) {
+            throw new Error('배치 메타데이터 형식이 올바르지 않습니다. batches 배열이 필요합니다.');
         }
-        else {
-            // 기존 단일 파일 처리 방식
-            console.log(`XML 처리 결과 로드 완료: ${data.processed_files.length}개 파일 처리됨`);
-            const browser = new browser_1.MiricanvasBrowser();
+        // 각 배치 처리
+        for (const batch of data.batches) {
+            console.log(`배치 ${batch.batch_idx + 1}/${data.total_batches} 처리 시작 (${batch.file_count}개 파일)`);
             try {
-                // 브라우저 시작 및 페이지 로드
-                const headless = process.env.HEADLESS === 'true';
-                const page = await browser.launch(headless);
-                // 페이지 로드 확인
-                console.log('페이지 타이틀:', await page.title());
-                // MiricanvasPage 인스턴스 생성
-                const miriPage = new page_1.MiricanvasPage(page);
-                // XML 파일 처리
-                for (const processedFile of data.processed_files) {
-                    console.log(`파일 처리 중: ${processedFile.file} (번호: ${processedFile.page_idx})`);
-                    // XML 문자열 직접 사용
-                    if (processedFile.positive_xml && processedFile.negative_xml) {
-                        await miriPage.processXmlString(processedFile.positive_xml, processedFile.negative_xml, processedFile.page_idx);
+                // 배치 데이터 로드
+                const batchData = loadJsonFile(batch.json_path);
+                console.log(`배치 데이터 로드 완료: ${batchData.processed_files.length}개 파일`);
+                // 브라우저 시작 (배치당 한 번만)
+                const browser = new browser_1.MiricanvasBrowser();
+                try {
+                    // 브라우저 시작 및 페이지 로드
+                    const headless = process.env.HEADLESS === 'false';
+                    const page = await browser.launch(headless);
+                    // 페이지 로드 확인
+                    console.log('페이지 타이틀:', await page.title());
+                    // MiricanvasPage 인스턴스 생성
+                    const miriPage = new page_1.MiricanvasPage(page);
+                    // 배치 내 각 파일 처리
+                    for (const processedFile of batchData.processed_files) {
+                        console.log(`파일 처리 중: ${processedFile.file} (번호: ${processedFile.page_idx})`);
+                        // XML 문자열 직접 사용
+                        if (processedFile.positive_xml && processedFile.negative_xml) {
+                            await miriPage.processXmlString(processedFile.positive_xml, processedFile.negative_xml, processedFile.page_idx);
+                        }
+                        else {
+                            console.warn(`경고: ${processedFile.file}에 XML 문자열이 없습니다.`);
+                        }
                     }
-                    else {
-                        console.warn(`경고: ${processedFile.file}에 XML 문자열이 없습니다.`);
-                    }
+                    console.log(`배치 ${batch.batch_idx + 1} 처리 완료`);
                 }
-                console.log('모든 작업이 성공적으로 완료되었습니다.');
+                finally {
+                    // 브라우저 종료
+                    await browser.close();
+                }
             }
             catch (error) {
-                console.error('작업 중 오류가 발생했습니다:', error);
-            }
-            finally {
-                // 브라우저 종료
-                await browser.close();
+                console.error(`배치 ${batch.batch_idx + 1} 처리 중 오류 발생:`, error);
             }
         }
+        console.log('모든 배치 처리가 완료되었습니다.');
     }
     catch (error) {
         console.error('데이터 로드 실패:', error);
