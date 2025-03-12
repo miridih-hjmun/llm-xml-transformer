@@ -162,7 +162,8 @@ export class MiricanvasPage {
    */
   private async saveXmlFiles(positiveXml: string, negativeXml: string, pageIdx: string): Promise<void> {
     try {
-      const outputDir = process.env.OUTPUT_PATH || './output';
+      // 명령줄 인자로 전달된 출력 경로 사용 (환경 변수로 설정됨)
+      const outputDir = process.env.OUTPUT_DIR || './output';
       
       // 페이지별 result 디렉토리 생성
       const resultDir = path.join(outputDir, 'result', pageIdx);
@@ -214,7 +215,7 @@ export class MiricanvasPage {
     }, renderOptions);
     
     // 이미지 저장 경로 - XML 파일과 동일한 폴더에 저장 (파일명 앞에 페이지 인덱스 추가)
-    const outputDir = process.env.OUTPUT_PATH || './output';
+    const outputDir = process.env.OUTPUT_DIR || './output';
     const resultDir = path.join(outputDir, 'result', pageIdx);
     const imagePath = path.join(resultDir, `${pageIdx}_${type}.png`);
     

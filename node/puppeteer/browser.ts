@@ -22,7 +22,7 @@ export class MiricanvasBrowser {
     console.log('로그인 버튼을 클릭합니다');
         // await this.captureScreenshot('login_page2.png');
         
-        await this.page!.waitForSelector('#__next > div.sc-95e08388-0.ffiSBb > div.sc-a2279643-0.dAsjrO > div.sc-472c6800-0.jPwXFu > div:nth-child(1) > button', { timeout: 60000 });
+        await this.page!.waitForSelector('#__next > div.sc-95e08388-0.ffiSBb > div.sc-a2279643-0.dAsjrO > div.sc-472c6800-0.jPwXFu > div:nth-child(1) > button', { visible: true, timeout: 60000 });
         await this.page!.click('#__next > div.sc-95e08388-0.ffiSBb > div.sc-a2279643-0.dAsjrO > div.sc-472c6800-0.jPwXFu > div:nth-child(1) > button');
         console.log('로그인 버튼 클릭 완료.');
 
