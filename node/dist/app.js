@@ -114,7 +114,9 @@ async function main() {
                 const browser = new browser_1.MiricanvasBrowser();
                 try {
                     // 브라우저 시작 및 페이지 로드
-                    const headless = process.env.HEADLESS === 'false';
+                    // True : 백그라운드 실행
+                    // False : 화면 실행
+                    const headless = false;
                     const page = await browser.launch(headless);
                     // 페이지 로드 확인
                     console.log('페이지 타이틀:', await page.title());

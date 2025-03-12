@@ -54,48 +54,120 @@ export class MiricanvasPage {
     this.page = page;
   }
 
-  /**
+/**
    * XML 문자열을 직접 처리합니다 (파일 읽기 없이 메모리에서 처리)
    * 
    * @param positiveXml positive XML 문자열
    * @param negativeXml negative XML 문자열
    * @param pageIdx 페이지 인덱스
    */
-  async processXmlString(positiveXml: string, negativeXml: string, pageIdx: string): Promise<void> {
-    try {
-      console.log(`XML 문자열 처리 중 (페이지 인덱스: ${pageIdx})...`);
+async processXmlString(positiveXml: string, negativeXml: string, pageIdx: string): Promise<void> {
+  try {
+    console.log(`XML 문자열 처리 중 (페이지 인덱스: ${pageIdx})...`);
+    
+    // 미리캔버스 스테이징 환경 접속
+    await this.navigateToStaging();
+    
+    // 업데이트된 XML 문자열을 저장할 변수
+    let updatedPositiveXml = '';
+    let updatedNegativeXml = '';
+    
+    // XML 문자열 배열과 타입 배열 생성
+    const xmlStrings = [positiveXml, negativeXml];
+    const types = ['positive', 'negative'];
+    
+    // 각 XML 문자열을 순차적으로 처리
+    for (let i = 0; i < xmlStrings.length; i++) {
+      const xmlString = xmlStrings[i];
+      const type = types[i];
       
-      // 미리캔버스 스테이징 환경 접속
-      await this.navigateToStaging();
+      console.log(`${type.charAt(0).toUpperCase() + type.slice(1)} XML 처리 중...`);
       
-      // 중요: XML 처리는 순차적으로 진행됩니다. 동시에 처리되지 않습니다.
-      
-      // XML 파일 저장
-      await this.saveXmlFiles(positiveXml, negativeXml, pageIdx);
-      
-      // XML 문자열 배열과 타입 배열 생성
-      const xmlStrings = [positiveXml, negativeXml];
-      const types = ['positive', 'negative'];
-      
-      // 각 XML 문자열을 순차적으로 처리
-      for (let i = 0; i < xmlStrings.length; i++) {
-        const xmlString = xmlStrings[i];
-        const type = types[i];
+      try {
+        // XML 문자열 로드
+        await this.loadXmlString(xmlString);
         
-        console.log(`${type.charAt(0).toUpperCase() + type.slice(1)} XML 처리 중...`);
+        // 최신화된 XML 문자열 내보내기
+        const updatedXmlString = await this.exportPageSheetXmlString({ pageIdx: 0 });
         
-        try {
-          await this.loadXmlString(xmlString);
-          await this.renderAndSaveImage(pageIdx, type);
-        } catch (error) {
-          console.error(`${type} XML 처리 중 오류 발생: ${error}`);
-          throw error;
+        // 타입에 따라 업데이트된 XML 저장
+        if (type === 'positive') {
+          updatedPositiveXml = updatedXmlString;
+        } else {
+          updatedNegativeXml = updatedXmlString;
         }
+        
+        // 이미지 렌더링 및 저장
+        await this.renderAndSaveImage(pageIdx, type);
+      } catch (error) {
+        console.error(`${type} XML 처리 중 오류 발생: ${error}`);
+        throw error;
       }
+    }
+    
+    // 업데이트된 XML 파일 저장
+    if (updatedPositiveXml && updatedNegativeXml) {
+      await this.saveXmlFile(updatedPositiveXml, updatedNegativeXml, pageIdx);
+    }
+    
+    console.log(`페이지 인덱스 ${pageIdx}의 XML 처리 완료`);
+  } catch (error) {
+    console.error(`XML 문자열 처리 중 오류 발생: ${error}`);
+    throw error;
+  }
+}
+
+ /**
+   * XML 파일을 처리합니다
+   * 
+   * @param positiveXmlPath positive XML 파일 경로
+   * @param negativeXmlPath negative XML 파일 경로
+   */
+ async processXmlFile(positiveXmlPath: string, negativeXmlPath: string): Promise<void> {
+  try {
+    console.log(`XML 파일 처리 중: ${path.basename(positiveXmlPath)}, ${path.basename(negativeXmlPath)}`);
+    
+    // XML 파일 읽기
+    const positiveXml = fs.readFileSync(positiveXmlPath, 'utf-8');
+    const negativeXml = fs.readFileSync(negativeXmlPath, 'utf-8');
+    
+    // 파일명에서 페이지 인덱스 추출
+    const pageIdx = path.basename(positiveXmlPath).split('_')[0];
+    
+    // XML 문자열 처리 메서드 호출
+    await this.processXmlString(positiveXml, negativeXml, pageIdx);
+  } catch (error) {
+    console.error(`XML 파일 처리 중 오류 발생: ${error}`);
+    throw error;
+  }
+}
+
+/**
+   * XML 파일을 저장합니다
+   * 
+   * @param positiveXml positive XML 문자열
+   * @param negativeXml negative XML 문자열
+   * @param pageIdx 페이지 인덱스
+   */
+  private async saveXmlFile(positiveXml: string, negativeXml: string, pageIdx: string): Promise<void> {
+    try {
+      // 명령줄 인자로 전달된 출력 경로 사용 (환경 변수로 설정됨)
+      const outputDir = process.env.OUTPUT_DIR || './output';
       
-      console.log(`페이지 인덱스 ${pageIdx}의 XML 처리 완료`);
+      // 페이지별 result 디렉토리 생성
+      const resultDir = path.join(outputDir, 'result', pageIdx);
+      fs.mkdirSync(resultDir, { recursive: true });
+      
+      // XML 파일 저장 (파일명 앞에 페이지 인덱스 추가)
+      const positiveXmlPath = path.join(resultDir, `${pageIdx}_positive.xml`);
+      const negativeXmlPath = path.join(resultDir, `${pageIdx}_negative.xml`);
+      
+      fs.writeFileSync(positiveXmlPath, positiveXml, 'utf-8');
+      fs.writeFileSync(negativeXmlPath, negativeXml, 'utf-8');
+      
+      console.log(`XML 파일 저장 완료: ${resultDir}`);
     } catch (error) {
-      console.error(`XML 문자열 처리 중 오류 발생: ${error}`);
+      console.error(`XML 파일 저장 중 오류 발생: ${error}`);
       throw error;
     }
   }
@@ -152,37 +224,6 @@ export class MiricanvasPage {
     await this.page.waitForNavigation({ waitUntil: 'networkidle0' });
     console.log('로그인 완료');
   }
-  
-  /**
-   * XML 파일을 저장합니다
-   * 
-   * @param positiveXml positive XML 문자열
-   * @param negativeXml negative XML 문자열
-   * @param pageIdx 페이지 인덱스
-   */
-  private async saveXmlFiles(positiveXml: string, negativeXml: string, pageIdx: string): Promise<void> {
-    try {
-      // 명령줄 인자로 전달된 출력 경로 사용 (환경 변수로 설정됨)
-      const outputDir = process.env.OUTPUT_DIR || './output';
-      
-      // 페이지별 result 디렉토리 생성
-      const resultDir = path.join(outputDir, 'result', pageIdx);
-      fs.mkdirSync(resultDir, { recursive: true });
-      
-      // XML 파일 저장 (파일명 앞에 페이지 인덱스 추가)
-      const positiveXmlPath = path.join(resultDir, `${pageIdx}_positive.xml`);
-      const negativeXmlPath = path.join(resultDir, `${pageIdx}_negative.xml`);
-      
-      fs.writeFileSync(positiveXmlPath, positiveXml, 'utf-8');
-      fs.writeFileSync(negativeXmlPath, negativeXml, 'utf-8');
-      
-      console.log(`XML 파일 저장 완료: ${resultDir}`);
-    } catch (error) {
-      console.error(`XML 파일 저장 중 오류 발생: ${error}`);
-      throw error;
-    }
-  }
-
 
   /**
    * XML 문자열을 로드합니다
@@ -209,10 +250,8 @@ export class MiricanvasPage {
       backgroundOpacityType: 'ONLY_WHITE' 
     };
     
-    // 페이지 렌더링
-    const imageDataUrl = await this.page.evaluate(async (options) => {
-      return await window.renderPage(options);
-    }, renderOptions);
+    // renderXmlString 메서드를 활용하여 페이지 렌더링
+    const imageDataUrl = await this.renderXmlString(renderOptions);
     
     // 이미지 저장 경로 - XML 파일과 동일한 폴더에 저장 (파일명 앞에 페이지 인덱스 추가)
     const outputDir = process.env.OUTPUT_DIR || './output';
@@ -227,94 +266,6 @@ export class MiricanvasPage {
     fs.writeFileSync(imagePath, Buffer.from(base64Data, 'base64'));
     
     console.log(`이미지 저장 완료: ${imagePath}`);
-  }
-  
-  /**
-   * XML 파일을 처리합니다
-   * 
-   * @param positiveXmlPath positive XML 파일 경로
-   * @param negativeXmlPath negative XML 파일 경로
-   */
-  async processXmlFile(positiveXmlPath: string, negativeXmlPath: string): Promise<void> {
-    try {
-      console.log(`XML 파일 처리 중: ${path.basename(positiveXmlPath)}, ${path.basename(negativeXmlPath)}`);
-      
-      // XML 파일 읽기
-      const positiveXml = fs.readFileSync(positiveXmlPath, 'utf-8');
-      const negativeXml = fs.readFileSync(negativeXmlPath, 'utf-8');
-      
-      // 파일명에서 페이지 인덱스 추출
-      const pageIdx = path.basename(positiveXmlPath).split('_')[0];
-      
-      // XML 문자열 처리 메서드 호출
-      await this.processXmlString(positiveXml, negativeXml, pageIdx);
-    } catch (error) {
-      console.error(`XML 파일 처리 중 오류 발생: ${error}`);
-      throw error;
-    }
-  }
-  
-  /**
-   * XML 파일 디렉토리를 처리합니다
-   * 
-   * @param inputDir 입력 디렉토리
-   * @param outputDir 출력 디렉토리
-   * @param renderOptions 렌더링 옵션
-   */
-  async processXmlDirectory(
-    inputDir: string, 
-    outputDir: string,
-    renderOptions = {}
-  ): Promise<number> {
-    if (!inputDir || !outputDir) {
-      console.error('입력 또는 출력 디렉토리가 지정되지 않았습니다.');
-      return 0;
-    }
-    
-    console.log(`입력 디렉토리: ${inputDir}`);
-    console.log(`출력 디렉토리: ${outputDir}`);
-    
-    // 디렉토리가 존재하는지 확인
-    if (!fs.existsSync(inputDir)) {
-      console.error(`입력 디렉토리가 존재하지 않습니다: ${inputDir}`);
-      return 0;
-    }
-    
-    // 출력 디렉토리 생성
-    fs.mkdirSync(outputDir, { recursive: true });
-    
-    // XML 파일 목록 가져오기
-    const files = fs.readdirSync(inputDir).filter(file => file.endsWith('.xml'));
-    
-    if (files.length === 0) {
-      console.log('처리할 XML 파일이 없습니다.');
-      return 0;
-    }
-    
-    console.log(`총 ${files.length}개의 XML 파일을 처리합니다.`);
-    
-    // 미리캔버스 스테이징 환경 접속
-    await this.navigateToStaging();
-    
-    let successCount = 0;
-    
-    // 각 XML 파일 처리
-    for (const file of files) {
-      const inputPath = path.join(inputDir, file);
-      const outputPath = path.join(outputDir, file);
-      
-      console.log(`XML 파일 처리 중: ${file}`);
-      try {
-        await this.processXmlFile(inputPath, outputPath);
-        console.log(`✅ 처리 완료: ${file} -> ${path.basename(outputPath)}`);
-        successCount++;
-      } catch (error) {
-        console.error(`❌ 처리 실패: ${file}`, error);
-      }
-    }
-    
-    console.log(`총 ${files.length}개 중 ${successCount}개 파일 처리 완료`);
-    return successCount;
   }
 
   /**
