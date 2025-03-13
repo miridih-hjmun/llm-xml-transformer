@@ -3,6 +3,7 @@ import json
 import os
 import io
 import sys
+import re
 
 # workflow.py 파일 경로 설정 (환경 변수 또는 상대 경로 사용)
 WORKFLOW_PATH = os.environ.get(
@@ -24,15 +25,12 @@ class XMLParser:
         self.tree = ET.parse(file_path)
         self.root = self.tree.getroot()
 
-    def generate_xml_string(self, is_positive=True):
+    def generate_xml_string(self):
         """
-        XML 파일을 처리하고 결과를 문자열로 반환합니다.
+        XML 파일을 한 번만 처리하여 positive와 negative 결과를 모두 얻습니다.
         
-        Args:
-            is_positive: True면 positive 텍스트, False면 negative 텍스트 적용
-            
         Returns:
-            str: 처리된 XML 문자열
+            tuple: (positive_xml_string, negative_xml_string) - positive와 negative XML 문자열
         """
         # 원본 XML 파일에서 텍스트 추출
         text_info_list = self.extract_text()
@@ -40,31 +38,42 @@ class XMLParser:
         tbpe_id_list = [tbpe_id for _, tbpe_id in text_info_list]
         
         if not text_list:
-            return ""
+            return "", ""
         
         # 텍스트 리스트를 \\+\\ 구분자로 연결
-        combined_text = "\\+\\".join(text_list)
+        combined_text = ""
+        for i, text in enumerate(text_list):
+            if i > 0:
+                combined_text += "\\+\\"
+            combined_text += text
         
-        # 새 어댑터의 process_text 함수에 결합된 텍스트 전달
+        # 새 어댑터의 process_text 함수에 결합된 텍스트 전달 (API 한 번만 호출)
         try:
             processed_result = process_text(combined_text)
             print(f"프롬프트 처리 결과: {processed_result}")
         except Exception as e:
-            return ""
+            print(f"프롬프트 처리 중 오류 발생: {e}")
+            return "", ""
         
-        # 텍스트 처리 및 XML 업데이트
-        doc_type = "positive" if is_positive else "negative"
-        text_info_list = self.extract_processed_texts(processed_result, text_list, tbpe_id_list, doc_type)
-        self.update_xml(text_info_list)
-        
-        # XML을 문자열로 변환
-        xml_string = self.xml_to_string()
+        # Positive 결과 처리
+        positive_text_info_list = self.extract_processed_texts(processed_result, text_list, tbpe_id_list, "positive")
+        self.update_xml(positive_text_info_list)
+        positive_xml_string = self.xml_to_string()
         
         # 원본 XML 파일을 다시 로드 (변경된 내용을 초기화)
         self.tree = ET.parse(self.file_path)
         self.root = self.tree.getroot()
         
-        return xml_string
+        # Negative 결과 처리
+        negative_text_info_list = self.extract_processed_texts(processed_result, text_list, tbpe_id_list, "negative")
+        self.update_xml(negative_text_info_list)
+        negative_xml_string = self.xml_to_string()
+        
+        # 원본 XML 파일을 다시 로드 (변경된 내용을 초기화)
+        self.tree = ET.parse(self.file_path)
+        self.root = self.tree.getroot()
+        
+        return positive_xml_string, negative_xml_string
 
     def xml_to_string(self):
         """XML 트리를 문자열로 변환"""
@@ -79,7 +88,7 @@ class XMLParser:
         Args:
             processed_result: process_text 함수의 결과 (딕셔너리 형태)
             text_list: 원본 텍스트 리스트
-            tbpe_id_list: TbpeId 리스트h
+            tbpe_id_list: TbpeId 리스트
             doc_type: 문서 유형 ("positive" 또는 "negative")
             
         Returns:
@@ -114,18 +123,22 @@ class XMLParser:
                 else:
                     print(f"분리된 텍스트 개수({len(processed_text_list)})와 원래 텍스트 개수({len(text_list)})가 같습니다.")
                 
-                # 텍스트와 TbpeId 매핑
+                # 텍스트와 TbpeId 매핑 (백슬래시 제거 추가)
                 for i, (processed_text, tbpe_id) in enumerate(zip(processed_text_list, tbpe_id_list)):
-                    prompted_text_info_list.append((processed_text, tbpe_id))
-                    print(f"프롬프트된 텍스트 {i+1}: {processed_text}")
+                    # 백슬래시(\) 제거 - 예: \example\ -> example
+                    cleaned_text = re.sub(r'\\([^\\])', r'\1', processed_text)
+                    prompted_text_info_list.append((cleaned_text, tbpe_id))
+                    print(f"프롬프트된 텍스트 {i+1}: {cleaned_text}")
             
             # 딕셔너리가 아닌 경우 (문자열인 경우)
             else:
                 # 원본 텍스트 유지
                 print("딕셔너리가 아닌 경우 원본 텍스트를 유지합니다.")
                 for i, (text, tbpe_id) in enumerate(zip(text_list, tbpe_id_list)):
-                    prompted_text_info_list.append((text, tbpe_id))
-                    print(f"원본 텍스트 {i+1}: {text}")
+                    # 백슬래시(\) 제거
+                    cleaned_text = re.sub(r'\\([^\\])', r'\1', text)
+                    prompted_text_info_list.append((cleaned_text, tbpe_id))
+                    print(f"원본 텍스트 {i+1}: {cleaned_text}")
         
         except Exception as e:
             # 오류 발생 시 원본 텍스트 유지
@@ -149,12 +162,19 @@ class XMLParser:
                     texts = self.extract_texts_from_json_structure(json_data)
                     tbpe_id = simple_text_tag.get('TbpeId')
                     
-                    # 추출된 각 텍스트에 대해 형식 변환
-                    for text in texts:
-                        if text is not None:  # text가 None이 아닌 경우에만 처리
-                            # 개행 문자만 \\\ 로 대체
-                            formatted_text = text.replace("\n", "\\\\\\")
-                            text_tag_info.append((formatted_text, tbpe_id))
+                    # 텍스트 리스트가 비어있지 않은 경우에만 처리
+                    if texts:
+                        # 텍스트 리스트를 공백으로 결합
+                        combined_text = ' '.join([text for text in texts if text is not None])
+                        
+                        # \xa0 문자를 공백으로 대체
+                        combined_text = combined_text.replace('\xa0', ' ')
+                        
+                        # 개행 문자를 \\\ 로 대체
+                        formatted_text = combined_text.replace("\n", "\\\\\\")
+                        
+                        # 결합된 텍스트와 TbpeId를 리스트에 추가
+                        text_tag_info.append((formatted_text, tbpe_id))
                 except json.JSONDecodeError:
                     continue
 
@@ -170,6 +190,9 @@ class XMLParser:
             
             tbpe_id = text_tag.get('TbpeId')
             if text is not None:
+                # \xa0 문자를 공백으로 대체
+                text = text.replace('\xa0', ' ')
+                
                 # 개행 문자만 \\\ 로 대체
                 formatted_text = text.replace("\n", "\\\\\\")
                 text_tag_info.append((formatted_text, tbpe_id))
@@ -208,7 +231,7 @@ class XMLParser:
         
         return result
         
-    def update_xml(self, response_list):
+    def update_xml(self, text_info_list):
         """
         XML을 응답 리스트를 기반으로 업데이트합니다.
         
@@ -226,21 +249,21 @@ class XMLParser:
             return self.root
         
         # 응답 리스트를 TbpeId를 키로 하는 딕셔너리로 변환
-        response_dict = {}
-        for text, tbpe_id in response_list:
-            response_dict[tbpe_id] = text
+        text_info_dict = {}
+        for text, tbpe_id in text_info_list:
+            text_info_dict[tbpe_id] = text
         
         # TEXT 태그 업데이트
         for text_tag in text_tags:
             tbpe_id = text_tag.get("TbpeId")
-            if tbpe_id in response_dict:
-                self.update_text_tag(text_tag, response_dict[tbpe_id])
+            if tbpe_id in text_info_dict:
+                self.update_text_tag(text_tag, text_info_dict[tbpe_id])
         
         # SIMPLE_TEXT 태그 업데이트
         for simple_text_tag in simple_text_tags:
             tbpe_id = simple_text_tag.get("TbpeId")
-            if tbpe_id in response_dict:
-                self.update_simple_text_tag(simple_text_tag, response_dict[tbpe_id])
+            if tbpe_id in text_info_dict:
+                self.update_simple_text_tag(simple_text_tag, text_info_dict[tbpe_id])
         
         return self.root
     
@@ -281,54 +304,69 @@ class XMLParser:
         """
         tbpe_id = simple_text_tag.get("TbpeId")
         
-        # 기존 JSON 데이터 파싱
+        # TextBody 태그 찾기
+        text_body = simple_text_tag.find("TextBody")
+        
+        if text_body is None:
+            print(f"TextBody 태그를 찾을 수 없음 (TbpeId: {tbpe_id})")
+            return
+        
         try:
-            json_data = json.loads(simple_text_tag.text)
+            # TextBody 태그의 JSON 데이터 파싱
+            json_data = json.loads(text_body.text)
             
-            # JSON 구조 업데이트
+            # JSON 구조 업데이트 (기존 메서드 활용)
             updated_json = self.update_text_json_structure(json_data, new_text)
             
-            # RenderPos 태그 제거
-            if isinstance(updated_json, dict) and "RenderPos" in updated_json:
-                del updated_json["RenderPos"]
-            
             # 업데이트된 JSON 데이터를 문자열로 변환하여 설정
-            simple_text_tag.text = json.dumps(updated_json, ensure_ascii=False)
+            text_body.text = json.dumps(updated_json, ensure_ascii=False)
+            
+            # RenderPos 태그 제거 (XML 태그로서 제거)
+            render_pos = simple_text_tag.find("RenderPos")
+            if render_pos is not None:
+                simple_text_tag.remove(render_pos)
+                print(f"RenderPos 태그 제거 완료 (TbpeId: {tbpe_id})")
             
         except (json.JSONDecodeError, TypeError) as e:
             # JSON 파싱 오류 시 텍스트 직접 설정
-            simple_text_tag.text = new_text
+            print(f"JSON 파싱 오류: {e}")
     
     def update_text_json_structure(self, json_data, new_text):
         """
         JSON 구조에서 텍스트를 업데이트합니다.
+        최상위 c키의 list에서 첫 번째 딕셔너리의 c키 리스트에서
+        첫 번째 항목만 유지하고 나머지는 삭제합니다.
         
         Args:
-            json_data: JSON 데이터 (딕셔너리 또는 리스트)
+            json_data: JSON 데이터 (딕셔너리)
             new_text: 새로운 텍스트
             
         Returns:
-            dict or list: 업데이트된 JSON 데이터
+            dict: 업데이트된 JSON 데이터
         """
-        # 딕셔너리인 경우
-        if isinstance(json_data, dict):
-            # Text 키가 있으면 업데이트
-            if "Text" in json_data:
-                json_data["Text"] = new_text
-            
-            # 각 키에 대해 재귀적으로 처리
-            for key, value in json_data.items():
-                if isinstance(value, (dict, list)):
-                    json_data[key] = self.update_text_json_structure(value, new_text)
+        # 최상위 c키가 있고 리스트인지 확인
+        if "c" in json_data and isinstance(json_data["c"], list) and len(json_data["c"]) > 0:
+            # 첫 번째 항목이 딕셔너리인지 확인
+            if isinstance(json_data["c"][0], dict):
+                # 첫 번째 항목의 c키가 있고 리스트인지 확인
+                if "c" in json_data["c"][0] and isinstance(json_data["c"][0]["c"], list):
+                    # c키 리스트에서 딕셔너리 항목 찾기
+                    dict_nodes = []
+                    for i, item in enumerate(json_data["c"][0]["c"]):
+                        if isinstance(item, dict) and "c" in item and isinstance(item["c"], list):
+                            dict_nodes.append(i)
+                    
+                    # 딕셔너리 노드가 있으면
+                    if dict_nodes:
+                        # 첫 번째 딕셔너리 노드 업데이트
+                        first_index = dict_nodes[0]
+                        json_data["c"][0]["c"][first_index]["c"] = [new_text]
+                        
+                        # 나머지 딕셔너리 노드 삭제 (역순으로 삭제)
+                        for index in sorted(dict_nodes[1:], reverse=True):
+                            json_data["c"][0]["c"].pop(index)
         
-        # 리스트인 경우
-        elif isinstance(json_data, list):
-            # 각 항목에 대해 재귀적으로 처리
-            for i, item in enumerate(json_data):
-                if isinstance(item, (dict, list)):
-                    json_data[i] = self.update_text_json_structure(item, new_text)
-        
-        return json_data
+        return json_data 
     
     def remove_textData_tag(self, parent_tag):
         """
