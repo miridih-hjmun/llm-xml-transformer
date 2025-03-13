@@ -1,0 +1,3 @@
+[submodule "prompt/ailabs-context-aware-retrieval-eval-dataset"]
+	path = prompt/ailabs-context-aware-retrieval-eval-dataset
+	url = https://github.com/miridih-jwlee02/ailabs-context-aware-retrieval-eval-dataset.git
