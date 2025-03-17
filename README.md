@@ -24,7 +24,7 @@ pip install ailabs-llm-xml-transformer
 GitHub에서 직접 설치할 때도 의존성이 자동으로 설치됩니다:
 
 ```bash
-pip install git+https://github.com/yourusername/ailabs-llm-xml-transformer.git
+pip install git+https://github.com/hjmun/ailabs-llm-xml-transformer.git
 ```
 
 ### 소스 코드에서 설치
