@@ -139,7 +139,6 @@ class XMLParser:
                     cleaned_text = re.sub(r'\\[+]\\', '', cleaned_text)
                     
                     prompted_text_info_list.append((cleaned_text, tbpe_id))
-                    print(f"프롬프트된 텍스트 {i+1}: {cleaned_text}")
             
             # 딕셔너리가 아닌 경우 (문자열인 경우)
             else:
@@ -156,7 +155,6 @@ class XMLParser:
                     cleaned_text = re.sub(r'\\[+]\\', '', cleaned_text)
                     
                     prompted_text_info_list.append((cleaned_text, tbpe_id))
-                    print(f"원본 텍스트 {i+1}: {cleaned_text}")
         
         except Exception as e:
             # 오류 발생 시 원본 텍스트 유지

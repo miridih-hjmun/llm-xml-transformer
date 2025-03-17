@@ -16,7 +16,6 @@ def load_environment_variables():
     
     # .env 파일 존재 여부 확인
     if not os.path.exists(dotenv_path):
-        print(f"경고: .env 파일을 찾을 수 없습니다. 경로: {dotenv_path}")
         return {"success": False, "message": "환경 변수 파일을 찾을 수 없습니다."}
     
     # .env 파일 로드
@@ -28,7 +27,6 @@ def load_environment_variables():
         missing_vars = [var for var in required_vars if not os.getenv(var)]
         
         if missing_vars:
-            print(f"경고: 다음 필수 환경 변수가 설정되지 않았습니다: {', '.join(missing_vars)}")
             return {
                 "success": False, 
                 "message": f"필수 환경 변수가 설정되지 않았습니다: {', '.join(missing_vars)}"
@@ -36,14 +34,10 @@ def load_environment_variables():
         
         # API 키 마스킹하여 출력
         api_key = os.getenv('OPENAI_API_KEY')
-        if api_key:
-            masked_key = f"{api_key[:5]}...{api_key[-4:]}" if len(api_key) > 10 else "***"
-            print(f"OPENAI_API_KEY 환경 변수가 설정되었습니다. 값: {masked_key}")
         
         return {"success": True, "message": "환경 변수 로드 성공"}
         
     except Exception as e:
-        print(f"환경 변수 로드 중 오류 발생: {e}")
         return {"success": False, "message": f"환경 변수 로드 중 오류 발생: {e}"}
 
 # 환경 변수 가져오기 함수

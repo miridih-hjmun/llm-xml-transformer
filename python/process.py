@@ -17,7 +17,6 @@ def process():
     batch_size = int(os.getenv('BATCH_SIZE', '100'))
     
     if not input_path or not output_path:
-        print("오류: 환경 변수 INPUT_PATH 또는 OUTPUT_PATH가 설정되지 않았습니다.")
         return {"success": False, "error": "환경 변수 설정 오류"}
 
     # 출력 디렉토리 생성
