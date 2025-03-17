@@ -349,8 +349,9 @@ class XMLParser:
     def update_text_json_structure(self, json_data, new_text):
         """
         JSON 구조에서 텍스트를 업데이트합니다.
-        최상위 c키의 list에서 첫 번째 딕셔너리의 c키 리스트에서
-        첫 번째 항목만 유지하고 나머지는 삭제합니다.
+        두 가지 구조를 모두 처리합니다:
+        1. 최상위 c키 -> 여러 문단 -> 텍스트 노드
+        2. 최상위 c키 -> 첫 번째 항목 -> c키 -> 텍스트 노드
         
         Args:
             json_data: JSON 데이터 (딕셔너리)
@@ -360,9 +361,22 @@ class XMLParser:
             dict: 업데이트된 JSON 데이터
         """
         # 최상위 c키가 있고 리스트인지 확인
-        if "c" in json_data and isinstance(json_data["c"], list) and len(json_data["c"]) > 0:
-            # 첫 번째 항목이 딕셔너리인지 확인
-            if isinstance(json_data["c"][0], dict):
+        if "c" in json_data and isinstance(json_data["c"], list):
+            # 구조 1: 모든 문단 처리
+            for paragraph in json_data["c"]:
+                # 문단이 딕셔너리인지 확인
+                if isinstance(paragraph, dict) and "c" in paragraph and isinstance(paragraph["c"], list):
+                    # 문단 내 텍스트 노드 찾기
+                    for i, item in enumerate(paragraph["c"]):
+                        # "t"가 "r"이고 "c"가 리스트인 항목 찾기 (텍스트 노드)
+                        if isinstance(item, dict) and item.get("t") == "r" and "c" in item and isinstance(item["c"], list):
+                            # 텍스트 노드의 내용을 새 텍스트로 업데이트
+                            item["c"] = [new_text]
+                            # 첫 번째 텍스트 노드만 업데이트하고 나머지는 유지
+                            break
+            
+            # 구조 2: 첫 번째 항목이 딕셔너리인지 확인 (이전 구조 지원)
+            if len(json_data["c"]) > 0 and isinstance(json_data["c"][0], dict):
                 # 첫 번째 항목의 c키가 있고 리스트인지 확인
                 if "c" in json_data["c"][0] and isinstance(json_data["c"][0]["c"], list):
                     # c키 리스트에서 딕셔너리 항목 찾기
@@ -376,12 +390,8 @@ class XMLParser:
                         # 첫 번째 딕셔너리 노드 업데이트
                         first_index = dict_nodes[0]
                         json_data["c"][0]["c"][first_index]["c"] = [new_text]
-                        
-                        # 나머지 딕셔너리 노드 삭제 (역순으로 삭제)
-                        for index in sorted(dict_nodes[1:], reverse=True):
-                            json_data["c"][0]["c"].pop(index)
         
-        return json_data 
+        return json_data
     
     def remove_textData_tag(self, parent_tag):
         """
