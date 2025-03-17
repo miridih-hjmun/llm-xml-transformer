@@ -116,8 +116,7 @@ async function main() {
                     // 브라우저 시작 및 페이지 로드
                     // True : 백그라운드 실행
                     // False : 화면 실행
-                    const headless = false;
-                    const page = await browser.launch(headless);
+                    const page = await browser.launch();
                     // 페이지 로드 확인
                     console.log('페이지 타이틀:', await page.title());
                     // MiricanvasPage 인스턴스 생성
