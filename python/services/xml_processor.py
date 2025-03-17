@@ -126,7 +126,18 @@ class XMLParser:
                 # 텍스트와 TbpeId 매핑 (백슬래시 제거 추가)
                 for i, (processed_text, tbpe_id) in enumerate(zip(processed_text_list, tbpe_id_list)):
                     # 백슬래시(\) 제거 - 예: \example\ -> example
-                    cleaned_text = re.sub(r'\\([^\\])', r'\1', processed_text)
+                    # 개선된 정규식 패턴: 백슬래시 뒤에 오는 문자를 보존하고 백슬래시만 제거
+                    # 1. \\+\\ 패턴은 그대로 유지 (구분자)
+                    # 2. \\n 패턴은 \n으로 변환 (개행 문자)
+                    # 3. 나머지 백슬래시는 제거
+                    cleaned_text = processed_text
+                    # 개행 문자 처리
+                    cleaned_text = re.sub(r'\\n', '\n', cleaned_text)
+                    # 백슬래시 제거 (구분자 패턴 제외)
+                    cleaned_text = re.sub(r'\\(?![+\\])', '', cleaned_text)
+                    # 남은 \\+\\ 구분자 제거
+                    cleaned_text = re.sub(r'\\[+]\\', '', cleaned_text)
+                    
                     prompted_text_info_list.append((cleaned_text, tbpe_id))
                     print(f"프롬프트된 텍스트 {i+1}: {cleaned_text}")
             
@@ -135,17 +146,21 @@ class XMLParser:
                 # 원본 텍스트 유지
                 print("딕셔너리가 아닌 경우 원본 텍스트를 유지합니다.")
                 for i, (text, tbpe_id) in enumerate(zip(text_list, tbpe_id_list)):
-                    # 백슬래시(\) 제거
-                    cleaned_text = re.sub(r'\\([^\\])', r'\1', text)
+                    # 백슬래시(\) 제거 - 개선된 방식 적용
+                    cleaned_text = text
+                    # 개행 문자 처리
+                    cleaned_text = re.sub(r'\\n', '\n', cleaned_text)
+                    # 백슬래시 제거 (구분자 패턴 제외)
+                    cleaned_text = re.sub(r'\\(?![+\\])', '', cleaned_text)
+                    # 남은 \\+\\ 구분자 제거
+                    cleaned_text = re.sub(r'\\[+]\\', '', cleaned_text)
+                    
                     prompted_text_info_list.append((cleaned_text, tbpe_id))
                     print(f"원본 텍스트 {i+1}: {cleaned_text}")
         
         except Exception as e:
             # 오류 발생 시 원본 텍스트 유지
-            print(f"오류 발생: {e}. 원본 텍스트를 유지합니다.")
-            for i, (text, tbpe_id) in enumerate(zip(text_list, tbpe_id_list)):
-                prompted_text_info_list.append((text, tbpe_id))
-                print(f"원본 텍스트 {i+1}: {text}")
+            print(f"오류 발생: {e}")
         
         return prompted_text_info_list
     
@@ -170,8 +185,8 @@ class XMLParser:
                         # \xa0 문자를 공백으로 대체
                         combined_text = combined_text.replace('\xa0', ' ')
                         
-                        # 개행 문자를 \\\ 로 대체
-                        formatted_text = combined_text.replace("\n", "\\\\\\")
+                        # 개행 문자를 \\n 로 대체
+                        formatted_text = combined_text.replace("\n", "\\n")
                         
                         # 결합된 텍스트와 TbpeId를 리스트에 추가
                         text_tag_info.append((formatted_text, tbpe_id))
@@ -193,8 +208,8 @@ class XMLParser:
                 # \xa0 문자를 공백으로 대체
                 text = text.replace('\xa0', ' ')
                 
-                # 개행 문자만 \\\ 로 대체
-                formatted_text = text.replace("\n", "\\\\\\")
+                # 개행 문자를 \\n 로 대체
+                formatted_text = text.replace("\n", "\\n")
                 text_tag_info.append((formatted_text, tbpe_id))
 
         return text_tag_info
