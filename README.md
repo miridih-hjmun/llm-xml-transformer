@@ -11,35 +11,30 @@ Python을 사용한 XML 문서 변환 및 LLM 프롬프트 처리 도구입니�
 
 ## 설치 방법
 
-### pip를 통한 설치 (권장)
+### 1. GitHub에서 직접 설치 (권장)
 
-pip를 통해 설치하면 필요한 모든 의존성이 자동으로 설치됩니다:
-
-```bash
-pip install ailabs-llm-xml-transformer
-```
-
-### GitHub에서 직접 설치
-
-GitHub에서 직접 설치할 때도 의존성이 자동으로 설치됩니다:
+가장 간단한 방법으로, 소스 코드를 클론하지 않고도 바로 설치할 수 있습니다:
 
 ```bash
 pip install git+https://github.com/miridih-hjmun/llm-xml-transformer.git
 ```
 
-### 소스 코드에서 설치
+이 명령은 GitHub 저장소에서 최신 코드를 다운로드하여 자동으로 설치합니다. 모든 의존성도 함께 설치됩니다.
 
-소스 코드를 다운로드하여 설치하는 경우:
+### 2. 소스 코드에서 설치 (개발자용)
+
+코드를 수정하거나 개발에 참여하려는 경우 다음 방법을 사용하세요:
 
 ```bash
 # 저장소 클론
-git clone https://github.com/yourusername/ailabs-llm-xml-transformer.git
-cd ailabs-llm-xml-transformer
+git clone https://github.com/miridih-hjmun/llm-xml-transformer.git
+cd llm-xml-transformer
 
-# 의존성 설치
-pip install -r requirements.txt
-
+# 개발 모드로 설치 (코드 수정 시 재설치 불필요)
+pip install -e .
 ```
+
+> 참고: `prompt/` 디렉토리에 이미 `setup.py` 파일이 존재하기 때문에 패키지 설치용 설정 파일은 `package_setup.py`와 `pyproject.toml`로 제공됩니다. 하지만 `pip install -e .` 명령은 `pyproject.toml`을 자동으로 인식하므로 추가 설정이 필요하지 않습니다.
 
 ## 의존성
 
@@ -49,13 +44,17 @@ pip install -r requirements.txt
 openai>=0.27.0
 python-dotenv>=0.19.0
 requests>=2.28.0
+langchain>=0.3.20
+langchain-openai>=0.3.8
+pydantic>=2.10.6
+PyYAML>=6.0.2
 ```
 
 ## 사용 방법
 
 ### 명령줄에서 실행
 
-이 도구는 명령줄 인자를 통해 입력 및 출력 경로를 지정하여 실행합니다:
+설치 후에는 `xml-transformer` 명령을 직접 사용할 수 있습니다:
 
 ```bash
 # 기본 실행 (필수 인자: --input, --output)
@@ -63,7 +62,6 @@ xml-transformer --input /path/to/input --output /path/to/output
 
 # 또는 짧은 옵션 사용
 xml-transformer -i /path/to/input -o /path/to/output
-
 ```
 
 ### 옵션 설명
@@ -79,14 +77,19 @@ xml-transformer -i /path/to/input -o /path/to/output
 
 1. python 디렉토리에서 .env 생성
 2. 아래 형식에 맞춰 필요한 환경 변수를 설정합니다.
-- OpenAI API 키 (필수)
+```
+# OpenAI API 키 (필수)
 OPENAI_API_KEY=your_openai_api_key
+```
 
 3. node 디렉토리에서 .env 생성
 4. 아래 형식에 맞춰 필요한 환경 변수를 설정합니다.
-- STAGING7_URL=puppeteer를 이용할 미캔 스테이징 주소
-- EMAIL=your_email
-- PASSWORD=your_password
+```
+# 미리캔버스 접근 정보
+STAGING7_URL=puppeteer를 이용할 미캔 스테이징 주소
+EMAIL=your_email
+PASSWORD=your_password
+```
 (puppeteer로 미캔에 접근하기 위해서 필수)
 
 ### 환경 변수 설명
@@ -109,14 +112,6 @@ OPENAI_API_KEY=your_openai_api_key
 - Python 3.8 이상
 - Node.js 14.0 이상 (Node.js 통합이 필요한 경우)
 - npm 6.0 이상 (Node.js 통합이 필요한 경우)
-
-### 의존성 설치
-
-개발을 위한 의존성 설치:
-
-```bash
-pip install -r requirements.txt
-```
 
 ### Node.js 의존성 설치 (필요한 경우)
 

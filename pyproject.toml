@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ailabs_llm_xml_transformer"
+version = "1.0.0"
+description = "XML 변환 및 LLM 처리를 위한 통합 도구"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "", email = ""}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: ISC License (ISCL)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+dependencies = [
+    "openai>=0.27.0",
+    "python-dotenv>=0.19.0",
+    "requests>=2.28.0",
+    "langchain>=0.3.20",
+    "langchain-openai>=0.3.8",
+    "pydantic>=2.10.6",
+    "PyYAML>=6.0.2",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/miridih-hjmun/llm-xml-transformer"
+"Bug Tracker" = "https://github.com/miridih-hjmun/llm-xml-transformer/issues"
+
+[project.scripts]
+xml-transformer = "python.main:main"
+
+[tool.setuptools]
+packages = ["python"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"ailabs_llm_xml_transformer" = ["node/**/*", "node/.env"] 
