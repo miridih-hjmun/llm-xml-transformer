@@ -9,6 +9,12 @@ Python을 사용한 XML 문서 변환 및 LLM 프롬프트 처리 도구입니�
 - 처리된 텍스트를 원본 XML 구조에 맞게 다시 삽입
 - 변환된 XML파일 및 이미지(PNG)파일 추출
 
+## 필수 요구사항
+
+- Python 3.9
+- Node.js 14.0 이상 (Node.js 통합이 필요한 경우)
+- npm 6.0 이상 (Node.js 통합이 필요한 경우)
+
 ## 설치 방법
 
 ### 1. GitHub에서 직접 설치 (권장)
@@ -44,10 +50,9 @@ pip install -e .
 openai>=0.27.0
 python-dotenv>=0.19.0
 requests>=2.28.0
-langchain>=0.3.20
-langchain-openai>=0.3.8
-pydantic>=2.10.6
-PyYAML>=6.0.2
+langchain<0.2.0
+pydantic<2.0.0
+PyYAML>=6.0
 ```
 
 ## 사용 방법
@@ -107,12 +112,6 @@ PASSWORD=your_password
 
 ## 개발 환경 설정
 
-### 필수 요구사항
-
-- Python 3.8 이상
-- Node.js 14.0 이상 (Node.js 통합이 필요한 경우)
-- npm 6.0 이상 (Node.js 통합이 필요한 경우)
-
 ### Node.js 의존성 설치 (필요한 경우)
 
 ```bash
@@ -120,7 +119,3 @@ cd node
 npm install
 npm run build
 ```
-
-## 라이센스
-
-이 프로젝트는 MIT 라이센스 하에 배포됩니다. 
