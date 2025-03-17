@@ -52,7 +52,7 @@ export class MiricanvasBrowser {
    * @param headless 헤드리스 모드 여부 (기본값: false)
    * @returns 생성된 페이지 객체
    */
-  async launch(headless: boolean = false): Promise<Page> {
+  async launch(headless: boolean = true): Promise<Page> {
     // 브라우저 시작
     this.browser = await puppeteer.launch({
       headless,
