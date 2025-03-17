@@ -17,19 +17,7 @@ Python을 사용한 XML 문서 변환 및 LLM 프롬프트 처리 도구입니�
 
 ## 설치 방법
 
-### 1. GitHub에서 직접 설치 (권장)
-
-가장 간단한 방법으로, 소스 코드를 클론하지 않고도 바로 설치할 수 있습니다:
-
-```bash
-pip install git+https://github.com/miridih-hjmun/llm-xml-transformer.git
-```
-
-이 명령은 GitHub 저장소에서 최신 코드를 다운로드하여 자동으로 설치합니다. 모든 의존성도 함께 설치됩니다.
-
-### 2. 소스 코드에서 설치 (개발자용)
-
-코드를 수정하거나 개발에 참여하려는 경우 다음 방법을 사용하세요:
+소스 코드에서 설치하는 방법을 권장합니다:
 
 ```bash
 # 저장소 클론
@@ -40,7 +28,7 @@ cd llm-xml-transformer
 pip install -e .
 ```
 
-> 참고: `prompt/` 디렉토리에 이미 `setup.py` 파일이 존재하기 때문에 패키지 설치용 설정 파일은 `package_setup.py`와 `pyproject.toml`로 제공됩니다. 하지만 `pip install -e .` 명령은 `pyproject.toml`을 자동으로 인식하므로 추가 설정이 필요하지 않습니다.
+> 참고: 이 프로젝트는 `pyproject.toml`과 `package_setup.py` 두 가지 설정 파일을 포함하고 있습니다. 기본적으로 `pip install -e .` 명령은 `pyproject.toml`을 사용하며 Python 3.9 이상이 필요합니다. `package_setup.py`는 이전 버전과의 호환성을 위해 유지되고 있습니다.
 
 ## 의존성
 
