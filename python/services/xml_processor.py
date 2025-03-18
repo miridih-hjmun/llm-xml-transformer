@@ -351,6 +351,8 @@ class XMLParser:
         1. 최상위 c키 -> 여러 문단 -> 텍스트 노드
         2. 최상위 c키 -> 첫 번째 항목 -> c키 -> 텍스트 노드
         
+        첫 번째 텍스트 노드만 업데이트하고 나머지 텍스트 노드는 삭제합니다.
+        
         Args:
             json_data: JSON 데이터 (딕셔너리)
             new_text: 새로운 텍스트
@@ -360,34 +362,37 @@ class XMLParser:
         """
         # 최상위 c키가 있고 리스트인지 확인
         if "c" in json_data and isinstance(json_data["c"], list):
-            # 구조 1: 모든 문단 처리
-            for paragraph in json_data["c"]:
-                # 문단이 딕셔너리인지 확인
+            # 첫 번째 문단 외 모든 문단 삭제
+            while len(json_data["c"]) > 1:
+                json_data["c"].pop()
+            
+            # 첫 번째 문단 처리
+            if len(json_data["c"]) > 0:
+                paragraph = json_data["c"][0]
+                
+                # 문단이 딕셔너리이고 c키가 있는지 확인
                 if isinstance(paragraph, dict) and "c" in paragraph and isinstance(paragraph["c"], list):
-                    # 문단 내 텍스트 노드 찾기
+                    # 첫 번째 텍스트 노드 찾기
+                    found_first_text = False
+                    
                     for i, item in enumerate(paragraph["c"]):
                         # "t"가 "r"이고 "c"가 리스트인 항목 찾기 (텍스트 노드)
                         if isinstance(item, dict) and item.get("t") == "r" and "c" in item and isinstance(item["c"], list):
-                            # 텍스트 노드의 내용을 새 텍스트로 업데이트
-                            item["c"] = [new_text]
-                            # 첫 번째 텍스트 노드만 업데이트하고 나머지는 유지
-                            break
-            
-            # 구조 2: 첫 번째 항목이 딕셔너리인지 확인 (이전 구조 지원)
-            if len(json_data["c"]) > 0 and isinstance(json_data["c"][0], dict):
-                # 첫 번째 항목의 c키가 있고 리스트인지 확인
-                if "c" in json_data["c"][0] and isinstance(json_data["c"][0]["c"], list):
-                    # c키 리스트에서 딕셔너리 항목 찾기
-                    dict_nodes = []
-                    for i, item in enumerate(json_data["c"][0]["c"]):
-                        if isinstance(item, dict) and "c" in item and isinstance(item["c"], list):
-                            dict_nodes.append(i)
+                            if not found_first_text:
+                                # 첫 번째 텍스트 노드 업데이트
+                                item["c"] = [new_text]
+                                found_first_text = True
+                            else:
+                                # 첫 번째 이후의 텍스트 노드는 삭제 대상으로 표시
+                                paragraph["c"][i] = None
                     
-                    # 딕셔너리 노드가 있으면
-                    if dict_nodes:
-                        # 첫 번째 딕셔너리 노드 업데이트
-                        first_index = dict_nodes[0]
-                        json_data["c"][0]["c"][first_index]["c"] = [new_text]
+                    # None으로 표시된 항목들 제거
+                    i = 0
+                    while i < len(paragraph["c"]):
+                        if paragraph["c"][i] is None:
+                            paragraph["c"].pop(i)
+                        else:
+                            i += 1
         
         return json_data
     
