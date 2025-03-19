@@ -4,6 +4,7 @@ import os
 import io
 import sys
 import re
+import math
 
 # workflow.py 파일 경로 설정 (환경 변수 또는 상대 경로 사용)
 WORKFLOW_PATH = os.environ.get(
@@ -352,6 +353,7 @@ class XMLParser:
         2. 최상위 c키 -> 첫 번째 항목 -> c키 -> 텍스트 노드
         
         첫 번째 텍스트 노드만 업데이트하고 나머지 텍스트 노드는 삭제합니다.
+        텍스트 길이 비율에 따라 폰트 크기도 자동으로 조정합니다.
         
         Args:
             json_data: JSON 데이터 (딕셔너리)
@@ -362,6 +364,9 @@ class XMLParser:
         """
         # 최상위 c키가 있고 리스트인지 확인
         if "c" in json_data and isinstance(json_data["c"], list):
+            # 전체 텍스트 길이 계산
+            original_total_text = " ".join(self.count_text_length_from_json(json_data))
+            
             # 첫 번째 문단 외 모든 문단 삭제
             while len(json_data["c"]) > 1:
                 json_data["c"].pop()
@@ -379,6 +384,14 @@ class XMLParser:
                         # "t"가 "r"이고 "c"가 리스트인 항목 찾기 (텍스트 노드)
                         if isinstance(item, dict) and item.get("t") == "r" and "c" in item and isinstance(item["c"], list):
                             if not found_first_text:
+                                # 폰트 크기 조정 (rp가 있고 size가 있는 경우)
+                                if "rp" in item and isinstance(item["rp"], dict) and "size" in item["rp"]:
+                                    original_size = item["rp"]["size"]
+                                    # 기존 메서드 호출하여 폰트 크기 조정 (전체 텍스트 길이 사용)
+                                    new_size = self.update_text_font_size(original_total_text, new_text, original_size)
+                                    item["rp"]["size"] = new_size
+                                    print(f"폰트 크기 조정: {original_size} -> {new_size} (전체 텍스트 길이 비율: {len(original_total_text)}/{len(new_text)})")
+                                
                                 # 첫 번째 텍스트 노드 업데이트
                                 item["c"] = [new_text]
                                 found_first_text = True
@@ -395,6 +408,76 @@ class XMLParser:
                             i += 1
         
         return json_data
+    
+    def count_text_length_from_json(self, json_data):
+        """
+        JSON 구조에서 모든 텍스트 노드의 텍스트 길이 합을 계산합니다.
+        
+        Args:
+            json_data: JSON 데이터 (딕셔너리)
+            
+        Returns:
+            int: 모든 텍스트의 길이 합
+        """
+        texts = []
+        
+        # 리스트인 경우 각 항목에 대해 재귀 호출
+        if isinstance(json_data, list):
+            for item in json_data:
+                texts.extend(self.count_text_length_from_json(item))
+        
+        # 딕셔너리인 경우
+        elif isinstance(json_data, dict):
+            # 텍스트 노드 처리 ("t"가 "r"이고 "c"에 문자열 리스트가 있는 경우)
+            if json_data.get("t") == "r" and "c" in json_data and isinstance(json_data["c"], list):
+                # "c" 리스트의 각 항목이 문자열인 경우 텍스트로 추가
+                for item in json_data["c"]:
+                    if isinstance(item, str):
+                        texts.append(item)
+                    else:
+                        # 문자열이 아닌 경우 재귀 처리
+                        texts.extend(self.count_text_length_from_json(item))
+            
+            # 다른 노드는 "c" 필드만 재귀적으로 처리
+            elif "c" in json_data:
+                texts.extend(self.count_text_length_from_json(json_data["c"]))
+        
+        # 최상위 호출인 경우에만 길이 계산
+        if isinstance(json_data, dict) and "t" not in json_data and any(key != "c" for key in json_data.keys()):
+            combined_text = " ".join(texts)
+            return len(combined_text)
+    
+        # 재귀 호출 중에는 텍스트 리스트 반환
+        return texts
+    
+    def update_text_font_size(self, original_text, new_text, original_size):
+        """
+        텍스트 길이 비율의 제곱근에 따라 폰트 크기를 조정합니다.
+        
+        Args:
+            original_text (str): 원본 텍스트
+            new_text (str): 변경된 텍스트
+            original_size (float): 원본 폰트 크기
+            
+        Returns:
+            float: 조정된 폰트 크기
+        """
+    
+        # 빈 문자열 처리
+        if not original_text or not new_text:
+            return original_size
+        
+        # 텍스트 길이 비율 계산 (예: 2배 길어지면 0.5 배율, 0.5배로 짧아지면 2 배율)
+        ratio = len(original_text) / len(new_text)
+        
+        # 비율에 제곱근 적용
+        ratio = math.sqrt(ratio)
+        
+        # 새 폰트 크기 계산
+        new_size = original_size * ratio
+        
+        return new_size
+        
     
     def remove_textData_tag(self, parent_tag):
         """
